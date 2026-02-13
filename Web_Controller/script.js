@@ -1,7 +1,7 @@
 // --- MODIFIE L'IP ICI AVANT DE PUSHER SUR GIT ---
 // Si tu es en partage de connexion : met l'IP de ton PC (ex: 192.168.137.1)
 // Si tu utilises Ngrok : met l'adresse wss://...
-const ADRESSE_PC = "ws://192.168.1.15:8080"; 
+const socket = new WebSocket('wss://https://https://ecureille.github.io/Dookey-Ascension/Web_Controller');
 
 const curseur = document.getElementById('curseur');
 const cases = document.querySelectorAll('.case-score');
@@ -76,3 +76,4 @@ document.getElementById('ecran-jeu').onclick = () => {
 melangerChiffres();
 animer();
 connecter();
+
