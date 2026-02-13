@@ -1,81 +1,78 @@
-const socket = new WebSocket('ws://192.168.1.XX:8080'); // Mets ton IP locale ici
+// --- MODIFIE L'IP ICI AVANT DE PUSHER SUR GIT ---
+// Si tu es en partage de connexion : met l'IP de ton PC (ex: 192.168.137.1)
+// Si tu utilises Ngrok : met l'adresse wss://...
+const ADRESSE_PC = "ws://192.168.1.15:8080"; 
+
 const curseur = document.getElementById('curseur');
 const cases = document.querySelectorAll('.case-score');
-
+const debug = document.getElementById('debug');
 let position = 0;
 let direction = 1;
 let estArrete = false;
-const vitesse = 1.5; 
+let socket;
 
-// Fonction pour mélanger l'ordre des chiffres
+function connecter() {
+    socket = new WebSocket(ADRESSE_PC);
+
+    socket.onopen = () => {
+        debug.innerText = "Connecté à " + ADRESSE_PC;
+        debug.style.color = "green";
+    };
+
+    socket.onclose = () => {
+        debug.innerText = "Déconnecté. Nouvelle tentative...";
+        debug.style.color = "red";
+        setTimeout(connecter, 3000); // Réessaie dans 3s
+    };
+
+    socket.onerror = (e) => {
+        debug.innerText = "Erreur connexion. Vérifie l'IP.";
+    };
+}
+
 function melangerChiffres() {
-    // Créer un tableau [1, 2, 3, 4, 5, 6] et le mélanger aléatoirement
     let chiffres = [1, 2, 3, 4, 5, 6].sort(() => Math.random() - 0.5);
-    
-    // Assigner les nouveaux chiffres aux cases
-    cases.forEach((elementCase, index) => {
-        elementCase.innerText = chiffres[index];
-        // On garde la valeur en mémoire pour savoir quel chiffre est où
-        elementCase.dataset.valeur = chiffres[index]; 
-    });
+    cases.forEach((el, index) => { el.innerText = chiffres[index]; });
 }
 
 function animer() {
     if (estArrete) return;
-
-    position += vitesse * direction;
-    
-    // Rebond sur les bords
+    position += 1.5 * direction;
     if (position >= 100) { position = 100; direction = -1; }
-    else if (position <= 0) { position = 0; direction = 1; }
+    if (position <= 0) { position = 0; direction = 1; }
     
     curseur.style.left = position + "%";
-
-    // Identifier la case sous le curseur (0 à 5)
-    let index = Math.min(Math.floor(position / (100 / 6)), 5);
     
-    // Gérer l'allumage des cases
+    let index = Math.min(Math.floor(position / (100 / 6)), 5);
     cases.forEach((c, i) => {
-        if (i === index) {
-            c.classList.add('case-active');
-        } else {
-            c.classList.remove('case-active');
-        }
+        if (i === index) c.classList.add('case-active');
+        else c.classList.remove('case-active');
     });
-
     requestAnimationFrame(animer);
 }
 
-// 1. On mélange et on lance au démarrage
-melangerChiffres();
-animer();
-
-// 2. Gestion du clic
-document.getElementById('ecran-cliquable').onclick = () => {
+// Clic
+document.getElementById('ecran-jeu').onclick = () => {
     if (!estArrete && socket.readyState === WebSocket.OPEN) {
         estArrete = true;
-        
-        // On récupère le score sur lequel le joueur s'est arrêté
-        let indexArret = Math.min(Math.floor(position / (100 / 6)), 5);
-        let scoreObtenu = cases[indexArret].innerText;
-        
-        // On envoie "CLIC" + le score (ex: "CLIC:6")
-        socket.send("CLIC:" + scoreObtenu);
-        
-        // Flash Vert Doux
-        document.body.style.backgroundColor = "#4caf50"; 
-        
-        setTimeout(() => { 
-            document.body.style.transition = "background-color 0.5s";
+        let index = Math.min(Math.floor(position / (100 / 6)), 5);
+        let score = cases[index].innerText;
+
+        socket.send("CLIC:" + score);
+
+        document.body.style.backgroundColor = "#4caf50";
+        setTimeout(() => {
             document.body.style.backgroundColor = "#1a1a1a";
-            
-            // Relance après 2 secondes avec un NOUVEAU mélange
             setTimeout(() => { 
-                document.body.style.transition = "none";
                 estArrete = false; 
-                melangerChiffres(); // <-- C'est ici que ça change tout !
+                melangerChiffres(); 
                 animer(); 
             }, 2000);
-        }, 150);
+        }, 200);
     }
 };
+
+// Lancement
+melangerChiffres();
+animer();
+connecter();
